@@ -2,8 +2,10 @@ package com.example.holosteganograph.service;
 
 import org.opencv.core.Mat;
 
+import java.io.IOException;
+
 public interface HoloEncoderService {
-    byte[] encodeTextToHoloInBytes(String text);
+    byte[] encodeTextToHoloInBytes(String text) throws IOException;
 
     String toBinaryString(String string);
 

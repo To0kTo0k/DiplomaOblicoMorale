@@ -1,9 +1,11 @@
 package com.example.holosteganograph.service;
 
-public interface SteganographService {
-    void textToSteganography();
+import java.io.IOException;
 
-    void SteganographyToText();
+public interface SteganographService {
+    void textToSteganography() throws IOException;
+
+    void SteganographyToText() throws IOException;
 
     void hideBytesInImage(byte[] bytes, String path);
 

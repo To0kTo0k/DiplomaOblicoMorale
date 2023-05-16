@@ -31,7 +31,7 @@ public class SteganographServiceImpl implements SteganographService {
      * Прячет заданный текст в заданную картинку
      **/
     @Override
-    public void textToSteganography() {
+    public void textToSteganography() throws IOException {
         byte[] bytes = encoderService.encodeTextToHoloInBytes(steganographDto.getText());
         hideBytesInImage(bytes, steganographDto.getFilename());
     }
@@ -40,7 +40,7 @@ public class SteganographServiceImpl implements SteganographService {
      * Достает текст из картинки
      **/
     @Override
-    public void SteganographyToText() {
+    public void SteganographyToText() throws IOException {
         byte[] bytes = readHidenBytesFromImage(steganographDto.getFilename());
         steganographDto.setText(decoderService.decodeHoloInBytesToText(bytes));
     }

@@ -24,7 +24,7 @@ import java.util.UUID;
 public class HoloEncoderServiceImpl implements HoloEncoderService {
 
     @Override
-    public byte[] encodeTextToHoloInBytes(String text) {
+    public byte[] encodeTextToHoloInBytes(String text) throws IOException {
         UUID uuid = Generators.timeBasedGenerator().generate();
         String filename = "encode" + uuid.toString() + ".png";
         String string = toBinaryString(text);
@@ -32,9 +32,7 @@ public class HoloEncoderServiceImpl implements HoloEncoderService {
         boolean[][] matrix = binaryStringToBinaryMatrix(string);
         binaryMatrixToImage(matrix, filename);
         Mat hologram = imageToHologram(filename);
-        try {
-            Files.delete(Path.of(filename));
-        } catch (IOException ignored) {}
+        Files.delete(Path.of(filename));
         return holoToBytes(hologram);
     }
 

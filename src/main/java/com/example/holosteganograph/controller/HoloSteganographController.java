@@ -17,14 +17,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Objects;
 import java.util.UUID;
 
 @RestController
@@ -40,14 +38,14 @@ public class HoloSteganographController {
     HoloSteganographDto steganographDto;
 
     @GetMapping("/coding")
-    public ResponseEntity<?> steganographyCoding(@RequestParam("file") MultipartFile file) throws IOException {
+    public ResponseEntity<?> steganographyCoding(@RequestParam("file") MultipartFile file, @RequestParam("text") String text) throws IOException {
         try (InputStream inputStream = file.getInputStream()) {
             UUID uuid = Generators.timeBasedGenerator().generate();
             String filename = uuid.toString() + "_" + file.getOriginalFilename();
             Path filePath = UPLOAD_DIRECTORY.resolve(filename);
             Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
             steganographDto.setFilename(filePath.toString());
-            steganographDto.setText("Coded text");
+            steganographDto.setText(text);
             steganographService.textToSteganography();
             Resource resource = new UrlResource(filePath.toUri());
             return ResponseEntity.ok()
