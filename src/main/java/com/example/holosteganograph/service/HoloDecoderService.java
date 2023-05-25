@@ -1,20 +1,17 @@
 package com.example.holosteganograph.service;
 
-import org.opencv.core.Mat;
+import com.example.holosteganograph.exceptions.CacheImageDeletingException;
+import com.example.holosteganograph.exceptions.FileNotUploadedException;
+import com.example.holosteganograph.exceptions.FindBytesFromImageException;
+import com.example.holosteganograph.exceptions.PreholoImageToBinaryMatrixTransformationException;
+import com.example.holosteganograph.model.IOContent;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.nio.file.Path;
 
 public interface HoloDecoderService {
-
-    String decodeHoloInBytesToText(byte[] bytes) throws IOException;
-
-    Mat bytesToHolo(byte[] bytes);
-
-    void hologramToImage(Mat hologram, String filename);
-
-    boolean[][] imageToBinaryMatrix(String filename);
-
-    String binaryMatrixToBinaryString(boolean[][] matrix);
-
-    String toCharString(String biteString);
+    IOContent steganographyToText(MultipartFile file, Path uploadDirectory, IOContent content)
+            throws FileNotUploadedException,
+            CacheImageDeletingException,
+            PreholoImageToBinaryMatrixTransformationException, FindBytesFromImageException;
 }
