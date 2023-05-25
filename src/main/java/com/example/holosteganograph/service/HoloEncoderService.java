@@ -11,5 +11,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.Path;
 
 public interface HoloEncoderService {
-    IOContent textToSteganography(MultipartFile file, String text, IOContent content, Path uploadDirectory) throws FileNotUploadedException, CacheImageDeletingException, FloatsToBytesTransformationException, HideBytesInImageException, PreholoImageCreationException;
+    void textToSteganography(MultipartFile file, String text, IOContent content, Path uploadDirectory)
+            throws FileNotUploadedException,
+            CacheImageDeletingException,
+            FloatsToBytesTransformationException,
+            HideBytesInImageException,
+            PreholoImageCreationException;
 }

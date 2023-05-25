@@ -1,8 +1,10 @@
 package com.example.holosteganograph.service.impl;
 
+import com.example.holosteganograph.exceptions.BytesToFloatsTransformationException;
 import com.example.holosteganograph.exceptions.CacheImageDeletingException;
 import com.example.holosteganograph.exceptions.FileNotUploadedException;
 import com.example.holosteganograph.exceptions.FindBytesFromImageException;
+import com.example.holosteganograph.exceptions.IllegalFileContentException;
 import com.example.holosteganograph.exceptions.PreholoImageToBinaryMatrixTransformationException;
 import com.example.holosteganograph.model.IOContent;
 import com.example.holosteganograph.service.HoloDecoderService;
@@ -33,11 +35,13 @@ import java.util.UUID;
 public class HoloDecoderServiceImpl implements HoloDecoderService {
 
     @Override
-    public IOContent steganographyToText(MultipartFile file, Path uploadDirectory, IOContent content)
+    public void steganographyToText(MultipartFile file, Path uploadDirectory, IOContent content)
             throws FileNotUploadedException,
             CacheImageDeletingException,
             PreholoImageToBinaryMatrixTransformationException,
-            FindBytesFromImageException {
+            FindBytesFromImageException,
+            IllegalFileContentException,
+            BytesToFloatsTransformationException {
         try (InputStream inputStream = file.getInputStream()) {
             UUID uuid = Generators.timeBasedGenerator().generate();
             String filename = uuid.toString() + "_" + file.getOriginalFilename();
@@ -46,15 +50,18 @@ public class HoloDecoderServiceImpl implements HoloDecoderService {
             content.setFilename(filePath.toString());
             byte[] bytes = readHiddenBytesFromImage(content.getFilename());
             content.setText(decodeHoloInBytesToText(bytes));
-            return content;
         } catch (IOException e) {
-            throw new FileNotUploadedException("Error get file as InputStream" + e.getMessage());
+            throw new FileNotUploadedException("Error get file as InputStream " + e.getMessage());
         } catch (FindBytesFromImageException e) {
             throw new FindBytesFromImageException(e.getMessage());
         } catch (CacheImageDeletingException e) {
             throw new CacheImageDeletingException(e.getMessage());
         } catch (PreholoImageToBinaryMatrixTransformationException e) {
             throw new PreholoImageToBinaryMatrixTransformationException(e.getMessage());
+        } catch (IllegalFileContentException e) {
+            throw new IllegalFileContentException(e.getMessage());
+        } catch (BytesToFloatsTransformationException e) {
+            throw new BytesToFloatsTransformationException(e.getMessage());
         }
     }
 
@@ -86,13 +93,15 @@ public class HoloDecoderServiceImpl implements HoloDecoderService {
             }
             return bytes;
         } catch (IOException e) {
-            throw new FindBytesFromImageException("Error find bytes of holo from image" + e.getMessage());
+            throw new FindBytesFromImageException("Error find bytes of holo from image " + e.getMessage());
         }
     }
 
     private String decodeHoloInBytesToText(byte[] bytes)
             throws CacheImageDeletingException,
-            PreholoImageToBinaryMatrixTransformationException {
+            PreholoImageToBinaryMatrixTransformationException,
+            IllegalFileContentException,
+            BytesToFloatsTransformationException {
         UUID uuid = Generators.timeBasedGenerator().generate();
         String filename = "decode" + uuid.toString() + ".png";
 
@@ -103,46 +112,53 @@ public class HoloDecoderServiceImpl implements HoloDecoderService {
         try {
             Files.delete(Path.of(filename));
         } catch (IOException e) {
-            throw new CacheImageDeletingException("Error deleting cache files" + e.getMessage());
+            throw new CacheImageDeletingException("Error deleting cache files " + e.getMessage());
         }
         return toCharString(string);
     }
 
-    private Mat bytesToHolo(byte[] bytes) {
-        int matrixSize = ByteBuffer.wrap(bytes).getInt();
-        bytes = Arrays.copyOfRange(bytes, 4, bytes.length);
+    private Mat bytesToHolo(byte[] bytes) throws IllegalFileContentException, BytesToFloatsTransformationException {
+        try {
+            int matrixSize = ByteBuffer.wrap(bytes).getInt();
+            bytes = Arrays.copyOfRange(bytes, 4, bytes.length);
 
-        int hologramBytesSize = ByteBuffer.wrap(bytes).getInt();
-        bytes = Arrays.copyOfRange(bytes, 4, bytes.length);
+            int hologramBytesSize = ByteBuffer.wrap(bytes).getInt();
+            bytes = Arrays.copyOfRange(bytes, 4, bytes.length);
 
-        byte[] firstPlaneByte = Arrays.copyOfRange(bytes, 0, hologramBytesSize);
-        bytes = Arrays.copyOfRange(bytes, hologramBytesSize, bytes.length);
-        byte[] secondPlaneByte = Arrays.copyOfRange(bytes, 0, hologramBytesSize);
+            byte[] firstPlaneByte = Arrays.copyOfRange(bytes, 0, hologramBytesSize);
+            bytes = Arrays.copyOfRange(bytes, hologramBytesSize, bytes.length);
+            byte[] secondPlaneByte = Arrays.copyOfRange(bytes, 0, hologramBytesSize);
 
-        float[] firstPlaneFloat = bytesToFloats(firstPlaneByte);
-        float[] secondPlaneFloat = bytesToFloats(secondPlaneByte);
+            float[] firstPlaneFloat = bytesToFloats(firstPlaneByte);
+            float[] secondPlaneFloat = bytesToFloats(secondPlaneByte);
 
-        Size size = new Size(matrixSize, matrixSize);
+            Size size = new Size(matrixSize, matrixSize);
 
-        Mat firstPlane = new Mat(size, CvType.CV_32F);
-        Mat secondPlane = new Mat(size, CvType.CV_32F);
+            Mat firstPlane = new Mat(size, CvType.CV_32F);
+            Mat secondPlane = new Mat(size, CvType.CV_32F);
 
-        firstPlane.put(0, 0, firstPlaneFloat);
-        secondPlane.put(0, 0, secondPlaneFloat);
+            firstPlane.put(0, 0, firstPlaneFloat);
+            secondPlane.put(0, 0, secondPlaneFloat);
 
-        List<Mat> planes = new ArrayList<>();
-        planes.add(firstPlane);
-        planes.add(secondPlane);
+            List<Mat> planes = new ArrayList<>();
+            planes.add(firstPlane);
+            planes.add(secondPlane);
 
-        Mat complex = new Mat();
-        Core.merge(planes, complex);
+            Mat complex = new Mat();
+            Core.merge(planes, complex);
 
-        return complex;
+            return complex;
+        } catch (IllegalArgumentException e) {
+            throw new IllegalFileContentException("File contains illegal information");
+        } catch (BytesToFloatsTransformationException e) {
+            throw new BytesToFloatsTransformationException(e.getMessage());
+        }
     }
 
-    private float[] bytesToFloats(byte[] bytes) {
+    private float[] bytesToFloats(byte[] bytes) throws BytesToFloatsTransformationException {
         if (bytes.length % Float.BYTES != 0)
-            throw new IllegalArgumentException("Illegal length");
+            throw new BytesToFloatsTransformationException(
+                    "Illegal bytes length: " + bytes.length + " % " + Float.BYTES + " != 0");
         float[] floats = new float[bytes.length / Float.BYTES];
         ByteBuffer.wrap(bytes).asFloatBuffer().get(floats);
         return floats;
@@ -173,7 +189,7 @@ public class HoloDecoderServiceImpl implements HoloDecoderService {
             return matrix;
         } catch (IOException e) {
             throw new PreholoImageToBinaryMatrixTransformationException(
-                    "Error preholo image to binary matrix transformation" + e.getMessage());
+                    "Error preholo image to binary matrix transformation " + e.getMessage());
         }
     }
 

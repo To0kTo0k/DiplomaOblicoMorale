@@ -1,10 +1,12 @@
 package com.example.holosteganograph.controller;
 
+import com.example.holosteganograph.exceptions.BytesToFloatsTransformationException;
 import com.example.holosteganograph.exceptions.CacheImageDeletingException;
 import com.example.holosteganograph.exceptions.FileNotUploadedException;
 import com.example.holosteganograph.exceptions.FindBytesFromImageException;
 import com.example.holosteganograph.exceptions.FloatsToBytesTransformationException;
 import com.example.holosteganograph.exceptions.HideBytesInImageException;
+import com.example.holosteganograph.exceptions.IllegalFileContentException;
 import com.example.holosteganograph.exceptions.PreholoImageCreationException;
 import com.example.holosteganograph.exceptions.PreholoImageToBinaryMatrixTransformationException;
 import com.example.holosteganograph.exceptions.ResourceResponseException;
@@ -56,7 +58,7 @@ public class HoloSteganographyController {
                     .contentType(MediaType.IMAGE_PNG)
                     .body(resource);
         } catch (IOException e) {
-            throw new ResourceResponseException("Error sending response as Resource" + e.getMessage());
+            throw new ResourceResponseException("Error sending response as Resource " + e.getMessage());
         }
     }
 
@@ -65,7 +67,9 @@ public class HoloSteganographyController {
             throws CacheImageDeletingException,
             FileNotUploadedException,
             PreholoImageToBinaryMatrixTransformationException,
-            FindBytesFromImageException {
+            FindBytesFromImageException,
+            IllegalFileContentException,
+            BytesToFloatsTransformationException {
         IOContent content = new IOContent();
         HoloDecoderService decoderService = new HoloDecoderServiceImpl();
         decoderService.steganographyToText(file, UPLOAD_DIRECTORY, content);
@@ -77,7 +81,7 @@ public class HoloSteganographyController {
         try {
             FileUtils.cleanDirectory(UPLOAD_DIRECTORY.toFile());
         } catch (IOException e) {
-            throw new CacheImageDeletingException("Error cleaning uploaded files" + e.getMessage());
+            throw new CacheImageDeletingException("Error cleaning uploaded files " + e.getMessage());
         }
     }
 }

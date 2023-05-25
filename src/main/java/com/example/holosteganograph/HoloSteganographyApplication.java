@@ -1,16 +1,15 @@
 package com.example.holosteganograph;
 
-import org.opencv.core.Core;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class HoloSteganographApplication {
+public class HoloSteganographyApplication {
     static {
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        nu.pattern.OpenCV.loadLocally();
     }
 
     public static void main(String[] args) {
-        SpringApplication.run(HoloSteganographApplication.class, args);
+        SpringApplication.run(HoloSteganographyApplication.class, args);
     }
 }

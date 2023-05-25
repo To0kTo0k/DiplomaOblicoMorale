@@ -1,19 +1,24 @@
 package com.example.holosteganograph.exceptions.handler;
 
 import com.example.holosteganograph.exceptions.response.ExceptionResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
 
-@ControllerAdvice
+@RestControllerAdvice
 public class ExceptionsHandler {
+
+    static final Logger log = LoggerFactory.getLogger(ExceptionsHandler.class);
+
     @ExceptionHandler
-    public ResponseEntity<ExceptionResponse> handleException(Exception e) {
-        String message =String.format("%s%s", LocalDateTime.now(), e.getMessage());
-        ExceptionResponse response = new ExceptionResponse(message);
-        return new ResponseEntity<>(response, HttpStatus.NOT_MODIFIED);
+    @ResponseStatus(value = HttpStatus.FORBIDDEN)
+    public ExceptionResponse handleException(Exception e) {
+        log.error(e.getMessage(), e);
+        return new ExceptionResponse(String.format("%s %s", LocalDateTime.now(), e.getMessage()));
     }
 }

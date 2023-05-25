@@ -34,7 +34,7 @@ import java.util.UUID;
 public class HoloEncoderServiceImpl implements HoloEncoderService {
 
     @Override
-    public IOContent textToSteganography(MultipartFile file, String text, IOContent content, Path uploadDirectory)
+    public void textToSteganography(MultipartFile file, String text, IOContent content, Path uploadDirectory)
             throws FileNotUploadedException,
             CacheImageDeletingException,
             FloatsToBytesTransformationException,
@@ -49,9 +49,8 @@ public class HoloEncoderServiceImpl implements HoloEncoderService {
             content.setText(text);
             byte[] bytes = encodeTextToHoloInBytes(content.getText());
             hideBytesInImage(bytes, content.getFilename());
-            return content;
         } catch (IOException e) {
-            throw new FileNotUploadedException("Error get file as InputStream" + e.getMessage());
+            throw new FileNotUploadedException("Error get file as InputStream " + e.getMessage());
         } catch (CacheImageDeletingException e) {
             throw new CacheImageDeletingException(e.getMessage());
         } catch (FloatsToBytesTransformationException e) {
@@ -77,7 +76,7 @@ public class HoloEncoderServiceImpl implements HoloEncoderService {
         try {
             Files.delete(Path.of(filename));
         } catch (IOException e) {
-            throw new CacheImageDeletingException("Error deleting cache files" + e.getMessage());
+            throw new CacheImageDeletingException("Error deleting cache files " + e.getMessage());
         }
         return holoToBytes(hologram);
     }
@@ -146,7 +145,7 @@ public class HoloEncoderServiceImpl implements HoloEncoderService {
             File output = new File(filename);
             ImageIO.write(image, "png", output);
         } catch (IOException e) {
-            throw new PreholoImageCreationException("Error preholo image creation" + e.getMessage());
+            throw new PreholoImageCreationException("Error preholo image creation " + e.getMessage());
         }
     }
 
@@ -214,7 +213,7 @@ public class HoloEncoderServiceImpl implements HoloEncoderService {
             }
             return outputStream.toByteArray();
         } catch (IOException e) {
-            throw new FloatsToBytesTransformationException("Error floats to bytes transformation" + e.getMessage());
+            throw new FloatsToBytesTransformationException("Error floats to bytes transformation " + e.getMessage());
         }
     }
 
@@ -262,7 +261,7 @@ public class HoloEncoderServiceImpl implements HoloEncoderService {
                 }
             }
         } catch (IOException e) {
-            throw new HideBytesInImageException("Error hide bytes of holo to image" + e.getMessage());
+            throw new HideBytesInImageException("Error hide bytes of holo to image " + e.getMessage());
         }
     }
 }
