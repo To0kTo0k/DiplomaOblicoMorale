@@ -40,9 +40,12 @@ public class HoloSteganographyController {
 
     private static final Path UPLOAD_DIRECTORY = Paths.get("src/main/resources/static/");
 
-    @PostMapping("/coding")
+    HoloEncoderService encoderService = new HoloEncoderServiceImpl();
+    HoloDecoderService decoderService = new HoloDecoderServiceImpl();
+
+    @PostMapping("/code")
     public ResponseEntity<Resource> steganographyCoding(@RequestParam(value = "file") MultipartFile file,
-                                                        @RequestParam("text") String text)
+                                                        @RequestParam(value = "text") String text)
             throws ResourceResponseException,
             FloatsToBytesTransformationException,
             CacheImageDeletingException,
@@ -50,7 +53,6 @@ public class HoloSteganographyController {
             FileNotUploadedException,
             PreholoImageCreationException {
         IOContent content = new IOContent();
-        HoloEncoderService encoderService = new HoloEncoderServiceImpl();
         encoderService.textToSteganography(file, text, content, UPLOAD_DIRECTORY);
         try {
             Resource resource = new UrlResource(Paths.get(content.getFilename()).toUri());
@@ -62,8 +64,8 @@ public class HoloSteganographyController {
         }
     }
 
-    @PostMapping("/decoding")
-    public ResponseEntity<String> steganographyDecoding(@RequestParam("file") MultipartFile file)
+    @PostMapping("/decode")
+    public ResponseEntity<String> steganographyDecoding(@RequestParam(value = "file") MultipartFile file)
             throws CacheImageDeletingException,
             FileNotUploadedException,
             PreholoImageToBinaryMatrixTransformationException,
@@ -71,12 +73,11 @@ public class HoloSteganographyController {
             IllegalFileContentException,
             BytesToFloatsTransformationException {
         IOContent content = new IOContent();
-        HoloDecoderService decoderService = new HoloDecoderServiceImpl();
         decoderService.steganographyToText(file, UPLOAD_DIRECTORY, content);
         return new ResponseEntity<>(content.getText(), HttpStatus.OK);
     }
 
-    @DeleteMapping("/deleting")
+    @DeleteMapping("/delete")
     public void deleteCash() throws CacheImageDeletingException {
         try {
             FileUtils.cleanDirectory(UPLOAD_DIRECTORY.toFile());
