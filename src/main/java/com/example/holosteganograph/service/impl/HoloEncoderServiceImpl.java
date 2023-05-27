@@ -5,13 +5,15 @@ import com.example.holosteganograph.exceptions.FileNotUploadedException;
 import com.example.holosteganograph.exceptions.FloatsToBytesTransformationException;
 import com.example.holosteganograph.exceptions.HideBytesInImageException;
 import com.example.holosteganograph.exceptions.PreholoImageCreationException;
-import com.example.holosteganograph.model.IOContent;
+import com.example.holosteganograph.exceptions.ResourceResponseException;
 import com.example.holosteganograph.service.HoloEncoderService;
 import com.fasterxml.uuid.Generators;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,57 +23,31 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Service
-public class HoloEncoderServiceImpl implements HoloEncoderService {
-
+public class HoloEncoderServiceImpl extends HoloServiceImpl implements HoloEncoderService {
     @Override
-    public void textToSteganography(MultipartFile file, String text, IOContent content, Path uploadDirectory)
-            throws FileNotUploadedException,
-            CacheImageDeletingException,
-            FloatsToBytesTransformationException,
-            HideBytesInImageException,
-            PreholoImageCreationException {
-        try (InputStream inputStream = file.getInputStream()) {
-            UUID uuid = Generators.timeBasedGenerator().generate();
-            String filename = uuid.toString() + "_" + file.getOriginalFilename();
-            Path filePath = uploadDirectory.resolve(filename);
-            Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
-            content.setFilename(filePath.toString());
-            content.setText(text);
-            byte[] bytes = encodeTextToHoloInBytes(content.getText());
-            hideBytesInImage(bytes, content.getFilename());
+    public Resource textToSteganography(MultipartFile file, String text, Path uploadDirectory) {
+        Path filePath = defineFilepath(file, uploadDirectory);
+        try {
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             throw new FileNotUploadedException("Error get file as InputStream " + e.getMessage());
-        } catch (CacheImageDeletingException e) {
-            throw new CacheImageDeletingException(e.getMessage());
-        } catch (FloatsToBytesTransformationException e) {
-            throw new FloatsToBytesTransformationException(e.getMessage());
-        } catch (HideBytesInImageException e) {
-            throw new HideBytesInImageException(e.getMessage());
-        } catch (PreholoImageCreationException e) {
-            throw new PreholoImageCreationException(e.getMessage());
         }
+        hideBytesInImage(encodeTextToHoloInBytes(text), filePath.toString());
+        return codingResponse(filePath.toString());
     }
 
-    private byte[] encodeTextToHoloInBytes(String text)
-            throws CacheImageDeletingException,
-            FloatsToBytesTransformationException,
-            PreholoImageCreationException {
-        UUID uuid = Generators.timeBasedGenerator().generate();
-        String filename = "encode" + uuid.toString() + ".png";
-        String string = toBinaryString(text);
-        string = expandBinaryString(string);
-        boolean[][] matrix = binaryStringToBinaryMatrix(string);
-        binaryMatrixToImage(matrix, filename);
+    private byte[] encodeTextToHoloInBytes(String text) {
+        String filename = "encode" + Generators.timeBasedGenerator().generate().toString() + ".png";
+        binaryMatrixToImage(binaryStringToBinaryMatrix(expandBinaryString(toBinaryString(text))), filename);
         Mat hologram = imageToHologram(filename);
         try {
             Files.delete(Path.of(filename));
@@ -82,10 +58,9 @@ public class HoloEncoderServiceImpl implements HoloEncoderService {
     }
 
     private String toBinaryString(String string) {
-        char[] charString = string.toCharArray();
-        StringBuilder biteString = new StringBuilder();
-        for (char s : charString) {
-            StringBuilder symbolInBites = new StringBuilder(Integer.toBinaryString(s));
+        var biteString = new StringBuilder();
+        for (char s : string.toCharArray()) {
+            var symbolInBites = new StringBuilder(Integer.toBinaryString(s));
             while (symbolInBites.length() < 16) {
                 symbolInBites.insert(0, "0");
             }
@@ -117,7 +92,7 @@ public class HoloEncoderServiceImpl implements HoloEncoderService {
 
     private boolean[][] binaryStringToBinaryMatrix(String charString) {
         int i = getBinaryMatrixSize(charString.length());
-        boolean[][] matrixBinary = new boolean[i][i];
+        var matrixBinary = new boolean[i][i];
         int counter = 0;
         for (int row = 0; row < i; row++) {
             for (int column = 0; column < i; column++) {
@@ -128,9 +103,9 @@ public class HoloEncoderServiceImpl implements HoloEncoderService {
         return matrixBinary;
     }
 
-    private void binaryMatrixToImage(boolean[][] matrix, String filename) throws PreholoImageCreationException {
+    private void binaryMatrixToImage(boolean[][] matrix, String filename) {
         try {
-            BufferedImage image = new BufferedImage(matrix.length, matrix.length, BufferedImage.TYPE_INT_RGB);
+            var image = new BufferedImage(matrix.length, matrix.length, BufferedImage.TYPE_INT_RGB);
             for (int i = 0; i < matrix.length; i++) {
                 for (int j = 0; j < matrix.length; j++) {
                     Color newColor;
@@ -142,70 +117,55 @@ public class HoloEncoderServiceImpl implements HoloEncoderService {
                     image.setRGB(i, j, newColor.getRGB());
                 }
             }
-            File output = new File(filename);
-            ImageIO.write(image, "png", output);
+            ImageIO.write(image, "png", new File(filename));
         } catch (IOException e) {
             throw new PreholoImageCreationException("Error preholo image creation " + e.getMessage());
         }
     }
 
     private Mat imageToHologram(String filename) {
-        Mat image = Imgcodecs.imread(filename, Imgcodecs.IMREAD_GRAYSCALE);
-
+        var image = Imgcodecs.imread(filename, Imgcodecs.IMREAD_GRAYSCALE);
         image.convertTo(image, CvType.CV_32F);
-
-        java.util.List<Mat> planes = new ArrayList<>();
+        List<Mat> planes = new ArrayList<>();
         planes.add(image);
         planes.add(Mat.zeros(image.size(), CvType.CV_32F));
-
-        Mat complex = new Mat();
+        var complex = new Mat();
         Core.merge(planes, complex);
-
         Core.dft(complex, complex);
-
         return complex;
     }
 
-    private byte[] holoToBytes(Mat hologram) throws FloatsToBytesTransformationException {
+    private byte[] holoToBytes(Mat hologram) {
         List<Mat> planes = new ArrayList<>();
         Core.split(hologram, planes);
-
-        float[] firstPlaneFloat = new float
+        var firstPlaneFloat = new float
                 [planes.get(0).rows() * planes.get(0).cols() * (int) planes.get(0).elemSize()];
-        float[] secondPlaneFloat = new float
+        var secondPlaneFloat = new float
                 [planes.get(1).rows() * planes.get(1).cols() * (int) planes.get(1).elemSize()];
-
         planes.get(0).get(0, 0, firstPlaneFloat);
         planes.get(1).get(0, 0, secondPlaneFloat);
-
         byte[] firstPlaneByte = floatsToBytes(firstPlaneFloat);
         byte[] secondPlaneByte = floatsToBytes(secondPlaneFloat);
-
-        int matrixSize = (int) hologram.size().height;
-
+        var matrixSize = (int) hologram.size().height;
         byte[] matrixSizeByte = intToBytes(matrixSize);
-
         byte[] hologramInBytesSize = intToBytes(firstPlaneByte.length);
-
-        byte[] combined = new byte[
+        var combined = new byte[
                 matrixSizeByte.length
                         + hologramInBytesSize.length
                         + firstPlaneByte.length
                         + secondPlaneByte.length
                 ];
-
-        ByteBuffer buffer = ByteBuffer.wrap(combined);
+        var buffer = ByteBuffer.wrap(combined);
         buffer.put(matrixSizeByte);
         buffer.put(hologramInBytesSize);
         buffer.put(firstPlaneByte);
         buffer.put(secondPlaneByte);
-
         return buffer.array();
     }
 
-    private byte[] floatsToBytes(float[] floats) throws FloatsToBytesTransformationException {
+    private byte[] floatsToBytes(float[] floats) {
         try {
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            var outputStream = new ByteArrayOutputStream();
             for (float aFloat : floats) {
                 int intBits = Float.floatToIntBits(aFloat);
                 byte[] bytes = {(byte) (intBits >> 24), (byte) (intBits >> 16), (byte) (intBits >> 8), (byte) (intBits)};
@@ -225,12 +185,10 @@ public class HoloEncoderServiceImpl implements HoloEncoderService {
                 (byte) value};
     }
 
-    private void hideBytesInImage(byte[] bytes, String path) throws HideBytesInImageException {
+    private void hideBytesInImage(byte[] bytes, String path) {
         try {
             BufferedImage image = ImageIO.read(new File(path));
-
             int byteIndex = 0;
-
             for (int i = 0; i < image.getWidth(); i++) {
                 for (int j = 0; j < image.getHeight(); j++) {
                     if (byteIndex >= bytes.length) {
@@ -238,7 +196,6 @@ public class HoloEncoderServiceImpl implements HoloEncoderService {
                         ImageIO.write(image, "png", output);
                         return;
                     }
-
                     byte aByte = bytes[byteIndex];
                     int pixel = image.getRGB(i, j);
                     int a = (pixel >> 24) & 0xff;
@@ -262,6 +219,14 @@ public class HoloEncoderServiceImpl implements HoloEncoderService {
             }
         } catch (IOException e) {
             throw new HideBytesInImageException("Error hide bytes of holo to image " + e.getMessage());
+        }
+    }
+
+    private Resource codingResponse(String filename) {
+        try {
+            return new UrlResource(Paths.get(filename).toUri());
+        } catch (IOException e) {
+            throw new ResourceResponseException("Error sending response as Resource " + e.getMessage());
         }
     }
 }

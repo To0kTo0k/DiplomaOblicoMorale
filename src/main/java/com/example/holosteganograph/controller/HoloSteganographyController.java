@@ -1,23 +1,11 @@
 package com.example.holosteganograph.controller;
 
-import com.example.holosteganograph.exceptions.BytesToFloatsTransformationException;
-import com.example.holosteganograph.exceptions.CacheImageDeletingException;
-import com.example.holosteganograph.exceptions.FileNotUploadedException;
-import com.example.holosteganograph.exceptions.FindBytesFromImageException;
-import com.example.holosteganograph.exceptions.FloatsToBytesTransformationException;
-import com.example.holosteganograph.exceptions.HideBytesInImageException;
-import com.example.holosteganograph.exceptions.IllegalFileContentException;
-import com.example.holosteganograph.exceptions.PreholoImageCreationException;
-import com.example.holosteganograph.exceptions.PreholoImageToBinaryMatrixTransformationException;
-import com.example.holosteganograph.exceptions.ResourceResponseException;
-import com.example.holosteganograph.model.IOContent;
 import com.example.holosteganograph.service.HoloDecoderService;
 import com.example.holosteganograph.service.HoloEncoderService;
-import com.example.holosteganograph.service.impl.HoloDecoderServiceImpl;
-import com.example.holosteganograph.service.impl.HoloEncoderServiceImpl;
-import org.apache.tomcat.util.http.fileupload.FileUtils;
+import com.example.holosteganograph.service.HoloService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -29,60 +17,42 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
-@RequestMapping("/upload")
+@RequestMapping("/api")
 public class HoloSteganographyController {
-
     private static final Path UPLOAD_DIRECTORY = Paths.get("src/main/resources/static/");
+    private final HoloService service;
+    private final HoloEncoderService encoderService;
+    private final HoloDecoderService decoderService;
 
-    HoloEncoderService encoderService = new HoloEncoderServiceImpl();
-    HoloDecoderService decoderService = new HoloDecoderServiceImpl();
+    @Autowired
+    public HoloSteganographyController(@Qualifier("holoServiceImpl") HoloService service,
+                                       HoloEncoderService encoderService,
+                                       HoloDecoderService decoderService) {
+        this.service = service;
+        this.encoderService = encoderService;
+        this.decoderService = decoderService;
+    }
 
     @PostMapping("/code")
     public ResponseEntity<Resource> steganographyCoding(@RequestParam(value = "file") MultipartFile file,
-                                                        @RequestParam(value = "text") String text)
-            throws ResourceResponseException,
-            FloatsToBytesTransformationException,
-            CacheImageDeletingException,
-            HideBytesInImageException,
-            FileNotUploadedException,
-            PreholoImageCreationException {
-        IOContent content = new IOContent();
-        encoderService.textToSteganography(file, text, content, UPLOAD_DIRECTORY);
-        try {
-            Resource resource = new UrlResource(Paths.get(content.getFilename()).toUri());
-            return ResponseEntity.ok()
-                    .contentType(MediaType.IMAGE_PNG)
-                    .body(resource);
-        } catch (IOException e) {
-            throw new ResourceResponseException("Error sending response as Resource " + e.getMessage());
-        }
+                                                        @RequestParam(value = "text") String text) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .body(encoderService.textToSteganography(file, text, UPLOAD_DIRECTORY));
     }
 
     @PostMapping("/decode")
-    public ResponseEntity<String> steganographyDecoding(@RequestParam(value = "file") MultipartFile file)
-            throws CacheImageDeletingException,
-            FileNotUploadedException,
-            PreholoImageToBinaryMatrixTransformationException,
-            FindBytesFromImageException,
-            IllegalFileContentException,
-            BytesToFloatsTransformationException {
-        IOContent content = new IOContent();
-        decoderService.steganographyToText(file, UPLOAD_DIRECTORY, content);
-        return new ResponseEntity<>(content.getText(), HttpStatus.OK);
+    public ResponseEntity<String> steganographyDecoding(@RequestParam(value = "file") MultipartFile file) {
+        return new ResponseEntity<>(decoderService.steganographyToText(file, UPLOAD_DIRECTORY), HttpStatus.OK);
     }
 
-    @DeleteMapping("/delete")
-    public void deleteCash() throws CacheImageDeletingException {
-        try {
-            FileUtils.cleanDirectory(UPLOAD_DIRECTORY.toFile());
-        } catch (IOException e) {
-            throw new CacheImageDeletingException("Error cleaning uploaded files " + e.getMessage());
-        }
+    @DeleteMapping
+    public void deleteCash() {
+        service.deleteCacheImage(UPLOAD_DIRECTORY);
     }
 }

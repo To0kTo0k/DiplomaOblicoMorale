@@ -1,6 +1,6 @@
 package com.example.holosteganograph.exceptions;
 
-public class HideBytesInImageException extends Exception {
+public class HideBytesInImageException extends RuntimeException {
     public HideBytesInImageException(String message) {
         super(message);
     }
