@@ -1,4 +1,4 @@
-package com.example.holosteganograph.exceptions.handler;
+package com.example.holosteganograph.controller.handler;
 
 import com.example.holosteganograph.exceptions.response.ExceptionResponse;
 import lombok.extern.slf4j.Slf4j;

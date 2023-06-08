@@ -6,6 +6,5 @@ import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.Path;
 
 public interface HoloEncoderService {
-
     Resource textToSteganography(MultipartFile file, String text, Path uploadDirectory);
 }

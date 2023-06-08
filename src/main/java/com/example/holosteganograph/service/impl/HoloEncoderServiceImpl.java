@@ -197,21 +197,16 @@ public class HoloEncoderServiceImpl extends HoloServiceImpl implements HoloEncod
                         return;
                     }
                     byte aByte = bytes[byteIndex];
-                    int pixel = image.getRGB(i, j);
-                    int a = (pixel >> 24) & 0xff;
-                    int r = (pixel >> 16) & 0xff;
-                    int g = (pixel >> 8) & 0xff;
-                    int b = pixel & 0xff;
+                    int[] rgb = getImagePixel(image, i, j);
+                    rgb[3] = (rgb[3] & ~3) | (aByte & 3);
+                    aByte >>= 2;
+                    rgb[2] = (rgb[2] & ~3) | (aByte & 3);
+                    aByte >>= 2;
+                    rgb[1] = (rgb[1] & ~3) | (aByte & 3);
+                    aByte >>= 2;
+                    rgb[0] = (rgb[0] & ~3) | (aByte & 3);
 
-                    b = (b & ~3) | (aByte & 3);
-                    aByte >>= 2;
-                    g = (g & ~3) | (aByte & 3);
-                    aByte >>= 2;
-                    r = (r & ~3) | (aByte & 3);
-                    aByte >>= 2;
-                    a = (a & ~3) | (aByte & 3);
-
-                    pixel = (a << 24) | (r << 16) | (g << 8) | b;
+                    int pixel = (rgb[0] << 24) | (rgb[1] << 16) | (rgb[2] << 8) | rgb[3];
                     image.setRGB(i, j, pixel);
 
                     byteIndex++;

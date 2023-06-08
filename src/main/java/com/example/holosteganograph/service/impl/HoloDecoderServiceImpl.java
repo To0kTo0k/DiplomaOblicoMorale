@@ -50,19 +50,14 @@ public class HoloDecoderServiceImpl extends HoloServiceImpl implements HoloDecod
 
             for (int i = 0; i < image.getWidth(); i++) {
                 for (int j = 0; j < image.getHeight(); j++) {
-                    int pixel = image.getRGB(i, j);
-                    int a = (pixel >> 24) & 0xff;
-                    int r = (pixel >> 16) & 0xff;
-                    int g = (pixel >> 8) & 0xff;
-                    int b = pixel & 0xff;
-
-                    byte aByte = (byte) (a & 3);
+                    int[] rgb = getImagePixel(image, i, j);
+                    byte aByte = (byte) (rgb[0] & 3);
                     aByte <<= 2;
-                    aByte |= (r & 3);
+                    aByte |= (rgb[1] & 3);
                     aByte <<= 2;
-                    aByte |= (g & 3);
+                    aByte |= (rgb[2] & 3);
                     aByte <<= 2;
-                    aByte |= (b & 3);
+                    aByte |= (rgb[3] & 3);
                     bytes[byteIndex] = aByte;
 
                     byteIndex++;
